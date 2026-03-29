@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cricket Auction</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#050d18;
+      --panel:#0c1628;
+      --panel-2:#0f1e35;
+      --card:#111f36;
+      --border:#243d5c;
+      --text:#eef4ff;
+      --muted:#94a8c4;
+      --accent:#4db8ff;
+      --accent-dim:rgba(77,184,255,.12);
+      --accent-2:#6ee7a0;
+      --accent-2-dim:rgba(110,231,160,.12);
+      --warn:#ffc14d;
+      --warn-dim:rgba(255,193,77,.14);
+      --danger:#ff7a7a;
+      --danger-dim:rgba(255,122,122,.12);
+      --shadow:0 20px 48px rgba(0,0,0,.35);
+      --shadow-sm:0 8px 24px rgba(0,0,0,.22);
+      --radius:18px;
+      --radius-sm:12px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:"DM Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:radial-gradient(ellipse 120% 80% at 50% -20%, #153a5c 0%, var(--bg) 55%);color:var(--text);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .hidden{display:none !important}
+    .app{min-height:100vh;padding:22px;max-width:min(1920px,100%);margin:0 auto;width:100%}
+    .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;background:linear-gradient(145deg,rgba(77,184,255,.08),rgba(255,255,255,.02));border:1px solid var(--border);border-radius:22px;padding:22px 24px;box-shadow:var(--shadow)}
+    .brand{display:flex;flex-direction:column;gap:8px;max-width:640px}
+    .brand h1{margin:0;font-size:clamp(22px,2.5vw,30px);font-weight:800;letter-spacing:-.02em;line-height:1.15}
+    .brand p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+    .role-switch{display:flex;gap:10px;flex-wrap:wrap}
+    .pill{border:1px solid var(--border);background:var(--panel-2);color:var(--text);border-radius:999px;padding:10px 14px;font-weight:600;transition:.18s transform,.18s opacity,.18s background}
+    .pill:hover{transform:translateY(-1px)}
+    .pill.active{background:linear-gradient(135deg,var(--accent),#5f8cff);border-color:transparent;color:#00111f}
+    .pill.secondary{background:#0f2236}
+    .layout{display:grid;gap:16px;margin-top:16px}
+    .stats{grid-template-columns:repeat(5,minmax(0,1fr))}
+    .stats .stat,.panel,.player-card,.role-card,.team-card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .stat{padding:18px 16px;border-radius:var(--radius)}
+    .stat .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+    .stat .value{font-size:clamp(18px,2vw,26px);font-weight:800;margin-top:10px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+    .main-grid{grid-template-columns:1.2fr .85fr}
+    .auction-page{display:flex;flex-direction:column;gap:16px;margin-top:12px}
+    /* Team status — full-width grid, room for roster */
+    .team-strip-wrap{
+      background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));
+      border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
+      padding:16px 18px 18px;
+      min-height:min(320px,42vh);
+    }
+    .team-strip-wrap__title{font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--muted);margin:0 0 10px}
+    .team-strip-wrap__hint{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.4}
+    .team-strip{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(268px,1fr));
+      gap:14px;
+      align-items:stretch;
+    }
+    @media (max-width:520px){.team-strip{grid-template-columns:1fr}}
+    .team-strip-card{
+      min-width:0;width:100%;
+      padding:14px 14px 12px;border-radius:var(--radius-sm);
+      background:linear-gradient(165deg,rgba(255,255,255,.06),rgba(0,0,0,.15));
+      border:1px solid var(--border);position:relative;
+      display:flex;flex-direction:column;min-height:220px;
+    }
+    .team-strip-card.team-colorized{
+      border-color:var(--team-color-border);
+      background:
+        radial-gradient(circle at 100% -20%, var(--team-color-soft) 0%, transparent 54%),
+        linear-gradient(165deg,rgba(255,255,255,.06),rgba(0,0,0,.15));
+      box-shadow:0 8px 24px rgba(0,0,0,.24), inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .team-strip-card::before{
+      content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--border);
+    }
+    .team-strip-card.team-card-v2--leading::before{background:linear-gradient(180deg,var(--accent),#5f8cff)}
+    .team-strip-card.team-card-v2--full::before{background:linear-gradient(180deg,var(--warn),#e8942e)}
+    .team-strip-card.team-card-v2--canbid::before{background:linear-gradient(180deg,var(--accent-2),#3cb878)}
+    .team-strip-card.team-card-v2--wait::before{background:linear-gradient(180deg,#8899b5,#5a6d8c)}
+    .team-strip-card.team-card-v2--capped::before{background:linear-gradient(180deg,var(--danger),#c44)}
+    .team-strip-card__name{font-weight:800;font-size:15px;letter-spacing:-.02em;margin-bottom:6px;padding-left:8px}
+    .team-strip-card.team-colorized .team-strip-card__name{
+      color:var(--team-color);
+      text-shadow:0 0 18px color-mix(in srgb, var(--team-color) 22%, transparent);
+    }
+    .team-strip-card.team-colorized .team-strip-roster__pr{color:var(--team-color)}
+    .team-strip-card .team-chip{font-size:9px;padding:4px 8px;margin-bottom:8px;margin-left:8px;display:inline-block}
+    .team-strip-card__row{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);padding-left:8px;line-height:1.4}
+    .team-strip-card__row strong{color:var(--text);font-variant-numeric:tabular-nums}
+    .team-strip-roster{margin-top:auto;padding-top:10px;border-top:1px solid rgba(31,58,86,.55);flex:1;min-height:0;display:flex;flex-direction:column}
+    .team-strip-roster__label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--muted);margin:0 0 6px;padding-left:8px}
+    .team-strip-roster__scroll{flex:1;min-height:72px;max-height:200px;overflow-y:auto;padding-right:4px}
+    .team-strip-roster__scroll::-webkit-scrollbar{width:6px}
+    .team-strip-roster__scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
+    .team-strip-roster__row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.2);border:1px solid rgba(31,58,86,.4);margin-bottom:6px;font-size:12px}
+    .team-strip-roster__row:last-child{margin-bottom:0}
+    .team-strip-roster__pic{width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid rgba(31,58,86,.5);background:#0a1726}
+    .team-strip-roster__nm{font-weight:600;min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .team-strip-roster__pr{font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent-2);font-size:12px;flex-shrink:0}
+    .team-strip-roster__empty{font-size:12px;color:var(--muted);padding:8px 8px;font-style:italic}
+    /* Two main sections: current list | (place bids + bid log) */
+    .auction-two-col{
+      display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.15fr);gap:14px;align-items:stretch;
+      min-height:min(440px,calc(100vh - 420px))
+    }
+    .auction-two-col .panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+    .auction-bids-row{
+      display:grid;
+      grid-template-columns:minmax(0,1.12fr) minmax(220px,0.88fr);
+      gap:14px;
+      align-items:stretch;
+      min-height:0;
+    }
+    .auction-bids-row .panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+    .auction-bids-row .bid-zone{flex:1}
+    .auction-bids-row .bid-log-panel .log-scroll{
+      flex:1;min-height:0;overflow-y:auto;padding-right:4px;
+    }
+    .current-list-scroll{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+    .admin-grid{grid-template-columns:1fr 1fr}
+    .panel{padding:18px 20px;border-radius:var(--radius)}
+    .panel h2{margin:0 0 12px;font-size:17px;font-weight:800;letter-spacing:-.02em}
+    .panel-sub{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.45;max-width:52ch}
+    .grid-2{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid-4{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))}
+    .grid-6{display:grid;gap:12px;grid-template-columns:repeat(6,minmax(0,1fr))}
+    .stack{display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .space-between{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .tiny{font-size:12px}
+    .avatar{width:150px;height:190px;border-radius:18px;border:1px dashed var(--border);overflow:hidden;background:#0a1726;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .player-head{display:grid;grid-template-columns:160px 1fr;gap:16px}
+    .player-name{font-size:32px;font-weight:900;line-height:1.05;margin:0}
+    /* Current lot — tier + role at a glance (auction pool) */
+    .player-block-hero{
+      display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;margin-bottom:4px;align-items:stretch;
+    }
+    .player-block-pill{
+      flex:1;min-width:min(200px,100%);
+      padding:16px 18px;border-radius:18px;text-align:left;
+      border:2px solid var(--border);
+      background:linear-gradient(165deg,rgba(255,255,255,.05),rgba(0,0,0,.2));
+      box-shadow:0 8px 24px rgba(0,0,0,.22);
+    }
+    .player-block-pill--tier{
+      border-color:rgba(77,184,255,.55);
+      background:linear-gradient(165deg,rgba(77,184,255,.18),rgba(77,184,255,.05));
+    }
+    .player-block-pill--role{
+      border-color:rgba(110,231,160,.45);
+      background:linear-gradient(165deg,rgba(110,231,160,.14),rgba(110,231,160,.04));
+    }
+    .player-block-pill__label{
+      display:block;font-size:11px;text-transform:uppercase;letter-spacing:.14em;font-weight:800;color:var(--muted);margin-bottom:6px;
+    }
+    .player-block-pill__value{
+      font-size:clamp(26px,4.2vw,40px);font-weight:900;line-height:1.05;letter-spacing:-.03em;
+      font-variant-numeric:tabular-nums;
+    }
+    .player-block-pill--tier .player-block-pill__value{color:var(--accent)}
+    .player-block-pill--role .player-block-pill__value{color:var(--accent-2)}
+    .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .tag{padding:7px 10px;border-radius:999px;background:#0b2033;border:1px solid var(--border);font-size:12px;color:var(--text);font-weight:700}
+    .tag.accent{background:rgba(71,181,255,.14);border-color:rgba(71,181,255,.35)}
+    .tag.good{background:rgba(124,222,136,.14);border-color:rgba(124,222,136,.35)}
+    .tag.warn{background:rgba(255,184,77,.14);border-color:rgba(255,184,77,.35)}
+    .tag.bad{background:rgba(255,107,107,.14);border-color:rgba(255,107,107,.35)}
+    .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+    .kpi{padding:12px;border-radius:16px;background:#081524;border:1px solid var(--border)}
+    .kpi .l{font-size:12px;color:var(--muted)}
+    .kpi .v{font-size:24px;font-weight:900;margin-top:4px}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .btn{border:1px solid var(--border);background:#0d1e31;color:var(--text);padding:11px 14px;border-radius:14px;font-weight:700;transition:.18s transform,.18s opacity,.18s background;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .btn:hover{transform:translateY(-1px)}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .btn.primary{background:linear-gradient(135deg,var(--accent),#6e8dff);color:#00111f;border-color:transparent}
+    .btn.good{background:linear-gradient(135deg,var(--accent-2),#48c776);color:#00140a;border-color:transparent}
+    .btn.warn{background:linear-gradient(135deg,#ffcc66,#ff9c48);color:#2b1600;border-color:transparent}
+    .btn.red{background:linear-gradient(135deg,#ff8b8b,#ff6161);color:#2b0000;border-color:transparent}
+    .btn.ghost{background:#12263d}
+    .input,.select,.textarea{width:100%;border-radius:14px;border:1px solid var(--border);background:#081524;color:var(--text);padding:11px 12px;outline:none}
+    .textarea{min-height:88px;resize:vertical}
+    .input:focus,.select:focus,.textarea:focus{border-color:rgba(71,181,255,.7);box-shadow:0 0 0 3px rgba(71,181,255,.12)}
+    .table-wrap{overflow:auto;border-radius:18px;border:1px solid var(--border);max-height:760px;background:#081524}
+    table{width:100%;border-collapse:collapse;min-width:1100px}
+    th,td{padding:12px 10px;border-bottom:1px solid rgba(31,58,86,.65);text-align:left;font-size:14px;vertical-align:top}
+    th{position:sticky;top:0;background:#0b1a2b;z-index:1;color:#bfd2ea;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    tr:hover td{background:rgba(255,255,255,.02)}
+    .badge{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid var(--border);background:#0c1c2d}
+    .badge.sold{background:rgba(124,222,136,.14);border-color:rgba(124,222,136,.3)}
+    .badge.unsold{background:rgba(255,184,77,.14);border-color:rgba(255,184,77,.3)}
+    .badge.pending{background:rgba(143,168,199,.08)}
+    .badge.retained{background:rgba(71,181,255,.12);border-color:rgba(71,181,255,.35)}
+    .queue{display:grid;gap:10px}
+    .queue-item{padding:12px;border-radius:16px;background:#081524;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .queue-item.active{border-color:rgba(71,181,255,.6);background:rgba(71,181,255,.08)}
+    .scroll{max-height:520px;overflow:auto;padding-right:4px}
+    .overlay{position:fixed;inset:0;background:rgba(1,7,14,.88);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:1000}
+    .overlay-card{width:min(960px,100%);background:linear-gradient(180deg,#0e1d30,#091521);border:1px solid var(--border);border-radius:28px;box-shadow:var(--shadow);padding:22px}
+    .overlay-card h2{margin:0 0 8px;font-size:30px}
+    .overlay-card p{margin:0 0 18px;color:var(--muted)}
+    .roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .role-card{padding:18px;cursor:pointer;transition:.18s transform,.18s border-color,.18s background;min-height:180px;display:flex;flex-direction:column;justify-content:space-between}
+    .role-card:hover{transform:translateY(-2px);border-color:rgba(71,181,255,.75);background:rgba(71,181,255,.06)}
+    .role-card h3{margin:0;font-size:22px}
+    .role-card ul{margin:10px 0 0 18px;color:var(--muted);line-height:1.6;padding:0}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .hr{height:1px;background:rgba(31,58,86,.65);margin:14px 0}
+    .notice{padding:12px 14px;border-radius:16px;border:1px solid rgba(77,184,255,.28);background:var(--accent-dim);color:#cfe8ff;font-size:13px;line-height:1.45}
+    /* Team dashboard — owner clarity */
+    .teams-panel-head{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;flex-shrink:0}
+    .teams-panel-head h2{margin:0}
+    .teams-panel-head .panel-sub{margin:0}
+    .team-card-v2{
+      position:relative;
+      padding:16px 16px 14px;
+      border-radius:var(--radius-sm);
+      background:linear-gradient(165deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+      border:1px solid var(--border);
+      box-shadow:var(--shadow-sm);
+      transition:border-color .2s, box-shadow .2s;
+    }
+    .team-card-v2::before{
+      content:"";
+      position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:4px;background:var(--border);
+    }
+    .team-card-v2--leading::before{background:linear-gradient(180deg,var(--accent),#5f8cff);box-shadow:0 0 12px rgba(77,184,255,.35)}
+    .team-card-v2--full::before{background:linear-gradient(180deg,var(--warn),#e8942e)}
+    .team-card-v2--canbid::before{background:linear-gradient(180deg,var(--accent-2),#3cb878)}
+    .team-card-v2--wait::before{background:linear-gradient(180deg,#8899b5,#5a6d8c)}
+    .team-card-v2--capped::before{background:linear-gradient(180deg,var(--danger),#c44)}
+    .team-card-v2__top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+    .team-card-v2__name{font-size:16px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+    .team-chip{
+      flex-shrink:0;
+      font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+      padding:5px 10px;border-radius:999px;border:1px solid var(--border);
+      background:rgba(0,0,0,.2);max-width:100%;text-align:right;line-height:1.25
+    }
+    .team-chip--leading{border-color:rgba(77,184,255,.45);background:var(--accent-dim);color:#b8e4ff}
+    .team-chip--full{border-color:rgba(255,193,77,.4);background:var(--warn-dim);color:#ffe6b3}
+    .team-chip--canbid{border-color:rgba(110,231,160,.45);background:var(--accent-2-dim);color:#c8f5d8}
+    .team-chip--wait{border-color:rgba(148,168,196,.35);background:rgba(148,168,196,.1);color:var(--muted)}
+    .team-chip--capped{border-color:rgba(255,122,122,.4);background:var(--danger-dim);color:#ffc9c9}
+    .team-chip--idle{border-color:rgba(148,168,196,.25);background:rgba(0,0,0,.15);color:var(--muted)}
+    .team-card-v2__hint{margin:8px 0 0;font-size:12px;color:var(--muted);line-height:1.4}
+    .squad-meter{margin:10px 0 12px}
+    .squad-meter__labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600}
+    .squad-meter__bar{height:8px;border-radius:999px;background:#0a1526;border:1px solid rgba(31,58,86,.8);overflow:hidden}
+    .squad-meter__fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent-2),#3daa6a);transition:width .35s ease}
+    .squad-meter__fill.is-full{background:linear-gradient(90deg,var(--warn),#d4922a)}
+    .team-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+    @media (max-width:520px){.team-metrics{grid-template-columns:1fr}}
+    .team-metric{
+      padding:10px 10px;border-radius:12px;background:#081424;border:1px solid rgba(31,58,86,.65);
+      text-align:center
+    }
+    .team-metric .lab{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:4px}
+    .team-metric .num{display:block;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.2}
+    .team-metric .num.accent{color:var(--accent)}
+    .team-metric .num.good{color:var(--accent-2)}
+    .team-metric .num.warn{color:var(--warn)}
+    .team-roster-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:0 0 8px}
+    .team-roster-list{display:flex;flex-direction:column;gap:6px}
+    .team-roster-row{
+      display:flex;justify-content:space-between;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.18);border:1px solid rgba(31,58,86,.45);
+      font-size:13px
+    }
+    .team-roster-row .nm{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .team-roster-row .pr{font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent-2);font-size:12px}
+    .team-card-v2--compact{padding:12px 12px 10px}
+    .team-card-v2--compact .team-card-v2__hint{
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+      margin:6px 0 0;font-size:11px;line-height:1.35
+    }
+    .team-card-v2--compact .squad-meter{margin:8px 0 10px}
+    .team-card-v2--compact .team-metrics{gap:6px;margin-bottom:8px}
+    .team-card-v2--compact .team-metric{padding:8px 6px}
+    .team-card-v2--compact .team-metric .num{font-size:15px}
+    .team-roster-compact{
+      font-size:11px;color:var(--muted);line-height:1.35;margin:0;padding-top:6px;border-top:1px solid rgba(31,58,86,.45);
+      display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden
+    }
+    .teams-grid-all{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    @media (min-width:1500px){.teams-grid-all{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    .bid-zone .panel h2{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .bid-pill{font-size:13px;font-weight:800;padding:6px 12px;border-radius:999px;background:var(--accent-dim);border:1px solid rgba(77,184,255,.35);color:#b3ddff}
+    .bid-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+    .bid-grid .btn{justify-content:flex-start;text-align:left;line-height:1.35}
+    .auction-bids-row .bid-grid{grid-template-columns:1fr;gap:8px}
+    .team-bid-btn{
+      border-color:var(--team-color-border);
+      background:linear-gradient(135deg, var(--team-color-soft), rgba(8,20,36,.72));
+    }
+    .team-bid-btn.primary{
+      background:linear-gradient(135deg, var(--team-color), color-mix(in srgb, var(--team-color) 70%, #0f2236));
+      color:var(--team-color-text);
+      border-color:color-mix(in srgb, var(--team-color) 65%, white);
+    }
+    .team-bid-btn:disabled{opacity:.5}
+    .auction-bids-row .bid-zone .panel-sub{font-size:12px;margin-bottom:10px}
+    .current-list-panel .player-head{align-items:start}
+    .current-list-panel .avatar{width:118px;height:132px;border-radius:14px}
+    .current-list-panel .player-name{font-size:clamp(20px,2.2vw,28px)}
+    .log-scroll .log-entry{
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:11px 12px;border-radius:12px;background:#081424;border:1px solid rgba(31,58,86,.55);
+      margin-bottom:8px
+    }
+    .log-scroll .log-entry:last-child{margin-bottom:0}
+    .log-entry__main{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .log-entry__main strong{font-size:14px}
+    .log-entry__amt{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;color:var(--accent)}
+    .current-list__msg{font-size:13px;color:var(--muted);margin:0 0 12px;padding:10px 12px;border-radius:12px;background:rgba(77,184,255,.06);border:1px solid rgba(31,58,86,.6)}
+    .small-table{width:100%;border-collapse:collapse;min-width:0}
+    .small-table th,.small-table td{padding:8px 6px;font-size:13px;border-bottom:1px solid rgba(31,58,86,.5)}
+    .right{text-align:right}
+    @media (max-width: 1100px){
+      .auction-two-col{grid-template-columns:1fr;min-height:0}
+    }
+    @media (max-width: 900px){
+      .auction-bids-row{grid-template-columns:1fr}
+      .auction-bids-row .bid-log-panel .log-scroll{max-height:min(280px,40vh)}
+    }
+    @media (max-width: 1200px){
+      .stats,.main-grid,.admin-grid{grid-template-columns:1fr}
+      .roles{grid-template-columns:1fr}
+      .player-head{grid-template-columns:1fr}
+      .grid-6{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+    @media (max-width: 720px){
+      .grid-2,.grid-3,.grid-4,.grid-6,.kpis{grid-template-columns:1fr}
+      .brand h1{font-size:22px}
+      .overlay-card h2{font-size:24px}
+      .btn{width:100%}
+      .top-actions,.btns,.role-switch{width:100%}
+      .pill{width:100%}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <h1>Highland Gardens Premier League Auction</h1>
+      <p id="viewSubtitle" class="muted" style="margin:6px 0 0;font-size:14px;line-height:1.4"></p>
+    </div>
+  </div>
+
+  <div id="mainArea"></div>
+</div>
+
+<script>
+(() => {
+  const urlParams = new URLSearchParams(location.search);
+  const roomId = (urlParams.get('room') || 'default').slice(0, 64);
+  const viewRaw = (urlParams.get('view') || 'auctioneer').toLowerCase();
+  const teamIdFromUrl = (urlParams.get('teamId') || '').trim();
+  const isTeamDashboardMode = viewRaw === 'team';
+  const showTeamUrlHelp = isTeamDashboardMode && !teamIdFromUrl;
+  const showTeamDashboard = isTeamDashboardMode && !!teamIdFromUrl;
+  const enableHostShortcuts = !isTeamDashboardMode;
+
+  const $ = (sel) => document.querySelector(sel);
+  const TEAM_PALETTE = {
+    'team-1': { name: 'Orange', base: '#ff9f1c', soft: 'rgba(255,159,28,.19)', border: 'rgba(255,159,28,.52)', text: '#2c1b00' },
+    'team-2': { name: 'Red', base: '#ef4444', soft: 'rgba(239,68,68,.18)', border: 'rgba(239,68,68,.5)', text: '#2a0303' },
+    'team-3': { name: 'Dark Grey', base: '#9ca3af', soft: 'rgba(156,163,175,.2)', border: 'rgba(156,163,175,.52)', text: '#111827' },
+    'team-4': { name: 'Navy Blue', base: '#1f4ba5', soft: 'rgba(31,75,165,.2)', border: 'rgba(31,75,165,.52)', text: '#ecf3ff' },
+    'team-5': { name: 'Yellow', base: '#facc15', soft: 'rgba(250,204,21,.22)', border: 'rgba(250,204,21,.55)', text: '#2b2400' },
+    'team-6': { name: 'Blue', base: '#3b82f6', soft: 'rgba(59,130,246,.2)', border: 'rgba(59,130,246,.52)', text: '#eaf3ff' },
+  };
+
+  function teamPalette(teamId) {
+    return TEAM_PALETTE[teamId] || { name: 'Team', base: '#4db8ff', soft: 'rgba(77,184,255,.16)', border: 'rgba(77,184,255,.45)', text: '#00111f' };
+  }
+
+  function teamPaletteVars(teamId) {
+    const c = teamPalette(teamId);
+    return `--team-color:${c.base};--team-color-soft:${c.soft};--team-color-border:${c.border};--team-color-text:${c.text};`;
+  }
+
+  function inferIncrement(tier) {
+    const inc = state.config && state.config.increments;
+    return (inc && inc[tier] != null) ? inc[tier] : 1;
+  }
+
+  let state = {
+    config: {
+      purse: 0,
+      basePrices: { A: 0, B: 0, C: 0 },
+      increments: { A: 1, B: 1, C: 1 },
+      teamSize: 10,
+    },
+    players: [],
+    teams: [],
+    queue: [],
+    unsoldQueue: [],
+    currentPlayerId: '',
+    highestBid: 0,
+    highestTeamId: '',
+    phase: 'setup',
+    bidHistory: [],
+    selectedPlayerId: '',
+    message: 'Connecting…',
+    search: '',
+  };
+
+  function wsUrl() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${location.host}/ws?room=${encodeURIComponent(roomId)}`;
+  }
+
+  let ws = null;
+  let wsReconnectTimer = null;
+
+  function mergeServerState(serverState) {
+    if (!serverState || typeof serverState !== 'object') return;
+    state = { ...serverState };
+    render();
+  }
+
+  async function serverAction(action, payload = {}) {
+    try {
+      const res = await fetch('/api/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room: roomId, action, payload }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data.ok) {
+        state = { ...state, message: data.error || 'Action failed' };
+        render();
+        return false;
+      }
+      mergeServerState(data.state);
+      return true;
+    } catch (err) {
+      console.error(err);
+      state = { ...state, message: 'Cannot reach server. Run npm start and open the URL shown in that terminal.' };
+      render();
+      return false;
+    }
+  }
+
+  function connectWebSocket() {
+    if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+    try {
+      ws = new WebSocket(wsUrl());
+    } catch (e) {
+      console.error(e);
+      wsReconnectTimer = setTimeout(connectWebSocket, 2000);
+      return;
+    }
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'state' && msg.state) mergeServerState(msg.state);
+      } catch (err) { console.error(err); }
+    };
+    ws.onclose = () => {
+      wsReconnectTimer = setTimeout(connectWebSocket, 2000);
+    };
+    ws.onerror = () => { try { ws.close(); } catch (_) {} };
+  }
+
+  async function bootstrap() {
+    try {
+      const res = await fetch(`/api/state?room=${encodeURIComponent(roomId)}`);
+      if (!res.ok) throw new Error('bad status');
+      const data = await res.json();
+      mergeServerState(data.state);
+    } catch (err) {
+      console.error(err);
+      state = { ...state, message: 'Cannot load auction state. Run npm start and open the URL shown in that terminal.' };
+      render();
+    }
+    connectWebSocket();
+  }
+
+  function currentPlayer() {
+    return state.players.find(p => p.id === state.currentPlayerId) || null;
+  }
+
+  function leadingTeam() {
+    return state.teams.find(t => t.id === state.highestTeamId) || null;
+  }
+
+  function nextBidAmount() {
+    const p = currentPlayer();
+    if (!p) return 0;
+    return state.highestBid > 0 ? state.highestBid + inferIncrement(p.tier) : p.basePrice;
+  }
+
+  function minPurseReserveForFutureSlots(team, currentPlayerId) {
+    const teamSize = state.config.teamSize;
+    const slotsAfterThisWin = team.roster.length + 1;
+    const stillNeeded = teamSize - slotsAfterThisWin;
+    if (stillNeeded <= 0) return 0;
+    const candidates = state.players
+      .filter((pl) => pl.status !== 'sold' && pl.status !== 'retained' && pl.id !== currentPlayerId)
+      .map((pl) => pl.basePrice)
+      .sort((a, b) => a - b);
+    if (candidates.length < stillNeeded) return Number.POSITIVE_INFINITY;
+    return candidates.slice(0, stillNeeded).reduce((s, x) => s + x, 0);
+  }
+
+  function maxAffordableBid(team) {
+    const p = currentPlayer();
+    if (!p) return 0;
+    const reserve = minPurseReserveForFutureSlots(team, p.id);
+    if (!Number.isFinite(reserve)) return 0;
+    return Math.max(0, team.purse - reserve);
+  }
+
+  function pushLog(text) {
+    state = { ...state, message: text };
+    render();
+  }
+
+  function parseBidAmountInput(raw) {
+    const normalized = String(raw == null ? '' : raw).replaceAll(',', '').trim();
+    if (!normalized) return NaN;
+    return Number(normalized);
+  }
+
+  async function bid(teamId, customAmount=null) {
+    const p = currentPlayer();
+    if (!p || state.phase !== 'running') return;
+    const team = state.teams.find(t => t.id === teamId);
+    if (!team) return;
+    if (team.roster.length >= state.config.teamSize) return pushLog(`${team.name} already has ${state.config.teamSize} players.`);
+    if (state.highestBid > 0 && teamId === state.highestTeamId) {
+      return pushLog(`${team.name} cannot bid twice in a row — another team must bid first.`);
+    }
+    const amount = customAmount == null ? nextBidAmount() : Number(customAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return pushLog('Enter a valid custom bid amount.');
+    }
+    const minAllowed = nextBidAmount();
+    if (amount < minAllowed) {
+      return pushLog(`Custom bid must be at least ${minAllowed}.`);
+    }
+    if (team.purse < amount) return pushLog(`${team.name} does not have enough purse.`);
+    const cap = maxAffordableBid(team);
+    if (amount > cap) {
+      const p = currentPlayer();
+      const need = state.config.teamSize - team.roster.length - 1;
+      const reserve = p ? minPurseReserveForFutureSlots(team, p.id) : 0;
+      if (!Number.isFinite(reserve)) {
+        return pushLog(`${team.name} cannot bid: not enough unsold players left to fill the squad.`);
+      }
+      return pushLog(`${team.name} must reserve ${reserve} for ${need} remaining slot(s); max bid ${cap}.`);
+    }
+    await serverAction('bid', { teamId, customAmount: customAmount == null ? null : amount });
+  }
+
+  async function sellCurrent() {
+    const p = currentPlayer();
+    const team = leadingTeam();
+    if (!p || !team || !state.highestBid) return;
+    await serverAction('sell');
+  }
+
+  async function markUnsold() {
+    const p = currentPlayer();
+    if (!p) return;
+    await serverAction('markUnsold', {});
+  }
+
+  async function skipCurrent() {
+    const p = currentPlayer();
+    if (!p) return;
+    await serverAction('skip');
+  }
+
+  async function startAuction() {
+    await serverAction('startAuction');
+  }
+
+  async function pauseResume() {
+    await serverAction('pauseResume');
+  }
+
+  async function undo() {
+    await serverAction('undo');
+  }
+
+  async function resetAll() {
+    if (!confirm('Reset all auction data?')) return;
+    await serverAction('reset');
+  }
+
+  function teamSlots(team) { return `${team.roster.length}/${state.config.teamSize}`; }
+
+  /** Per-team copy for owners: purse, squad, can bid / wait / capped. */
+  function teamOwnerStatus(team) {
+    const p = currentPlayer();
+    const size = state.config.teamSize;
+    const slots = team.roster.length;
+    const cap = p ? maxAffordableBid(team) : 0;
+    const nextAmt = nextBidAmount();
+    const lastBidderBlocked = state.highestBid > 0 && state.highestTeamId === team.id;
+
+    if (slots >= size) {
+      return {
+        mod: 'team-card-v2--full',
+        chip: 'team-chip--full',
+        label: 'Squad complete',
+        hint: `All ${size} slots filled — this team cannot bid anymore.`,
+      };
+    }
+    if (state.phase === 'complete') {
+      return { mod: 'team-card-v2--wait', chip: 'team-chip--idle', label: 'Auction over', hint: 'This auction has finished.' };
+    }
+    if (!p) {
+      return {
+        mod: 'team-card-v2--wait',
+        chip: 'team-chip--idle',
+        label: 'No lot selected',
+        hint: 'When a player is on the block, your purse and max bid show here.',
+      };
+    }
+    if (state.phase === 'paused') {
+      return {
+        mod: 'team-card-v2--wait',
+        chip: 'team-chip--idle',
+        label: 'Paused',
+        hint: 'Bidding is frozen until the host resumes.',
+      };
+    }
+    if (state.phase === 'setup') {
+      return {
+        mod: 'team-card-v2--wait',
+        chip: 'team-chip--idle',
+        label: 'Not started',
+        hint: 'Start the auction to enable bidding.',
+      };
+    }
+    if (state.phase !== 'running') {
+      return { mod: 'team-card-v2--wait', chip: 'team-chip--idle', label: 'Waiting', hint: '' };
+    }
+    if (lastBidderBlocked) {
+      return {
+        mod: 'team-card-v2--leading',
+        chip: 'team-chip--leading',
+        label: 'You lead — wait',
+        hint: 'Another team must bid before you can raise again.',
+      };
+    }
+    if (team.purse < nextAmt) {
+      return {
+        mod: 'team-card-v2--capped',
+        chip: 'team-chip--capped',
+        label: 'Low purse',
+        hint: `Next bid is ${nextAmt}; you have ${team.purse} remaining.`,
+      };
+    }
+    if (nextAmt > cap) {
+      const need = size - slots - 1;
+      return {
+        mod: 'team-card-v2--capped',
+        chip: 'team-chip--capped',
+        label: 'Purse reserved',
+        hint: cap === 0
+          ? 'Not enough unsold players left at low prices to fill your remaining squad safely.'
+          : `Keep ${need} slot(s) in mind — max you can bid here is ${cap}.`,
+      };
+    }
+    return {
+      mod: 'team-card-v2--canbid',
+      chip: 'team-chip--canbid',
+      label: 'Can bid',
+      hint: `You may bid up to ${cap} on this player.`,
+    };
+  }
+
+  /** Signed squad: role after name, same style as (captain) / (icon) — lowercase in parentheses. */
+  function rosterRoleParen(role) {
+    const r = String(role || '').trim();
+    if (!r) return '';
+    return ` <span class="muted tiny">(${escapeHtml(r.toLowerCase())})</span>`;
+  }
+
+  function renderAuctioneer() {
+    const p = currentPlayer();
+    const leading = leadingTeam();
+    const logHtml = state.bidHistory.map(b => `
+      <div class="log-entry">
+        <div class="log-entry__main">
+          <strong>${escapeHtml(b.teamName)}</strong>
+          <span class="muted tiny">${escapeHtml(b.playerName)}</span>
+        </div>
+        <span class="log-entry__amt">${b.amount}</span>
+      </div>
+    `).join('') || '<div class="muted" style="padding:8px 0;">No bids on this player yet.</div>';
+
+    const teamStripHtml = state.teams.map((team) => {
+      const cap = maxAffordableBid(team);
+      const maxLabel = p ? cap : '—';
+      const st = teamOwnerStatus(team);
+      const size = state.config.teamSize;
+      const slots = team.roster.length;
+      const ownerPl = team.roster.find((pl) => pl.role === 'Owner');
+      const captainPl = team.roster.find((pl) => pl.role === 'Captain');
+      const iconPl = team.roster.find((pl) => pl.role === 'Icon');
+      const rosterInner = team.roster.length === 0
+        ? '<div class="team-strip-roster__empty">No players signed yet</div>'
+        : team.roster.map((pl) => `
+        <div class="team-strip-roster__row">
+          ${pl.image ? `<img class="team-strip-roster__pic" src="${escapeHtml(pl.image)}" alt="">` : ''}
+          <span class="team-strip-roster__nm">${escapeHtml(pl.name)}${rosterRoleParen(pl.role)}</span>
+          <span class="team-strip-roster__pr">${pl.soldPrice}</span>
+        </div>
+      `).join('');
+      const paletteStyle = teamPaletteVars(team.id);
+      return `
+      <div class="team-strip-card team-colorized ${st.mod}" style="${paletteStyle}" title="${escapeHtml(st.hint || team.name)}">
+        <div class="team-strip-card__name">${escapeHtml(team.name)}</div>
+        <span class="team-chip ${st.chip}">${escapeHtml(st.label)}</span>
+        <div class="team-strip-card__row"><span>Purse</span><strong>${team.purse}</strong></div>
+        <div class="team-strip-card__row"><span>Max bid</span><strong>${maxLabel}</strong></div>
+        <div class="team-strip-card__row"><span>Squad</span><strong>${slots}/${size}</strong></div>
+        <div class="team-strip-roster">
+          <p class="team-strip-roster__label">Signed squad</p>
+          <div class="team-strip-roster__scroll">${rosterInner}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="auction-page">
+        <div class="team-strip-wrap">
+          <p class="team-strip-wrap__title">Team status</p>
+          <div class="team-strip">${teamStripHtml}</div>
+        </div>
+
+        <div class="auction-two-col">
+          <div class="panel current-list-panel">
+            <h2 style="margin:0 0 4px;">Current player</h2>
+            <div class="current-list__msg">${escapeHtml(state.message)}</div>
+            <div class="current-list-scroll">
+              <div class="space-between" style="align-items:flex-start;margin-bottom:10px;">
+                <h3 style="margin:0;font-size:16px;">On the block</h3>
+                <div class="tags">
+                  ${leading ? `<span class="tag good">Leading: ${escapeHtml(leading.name)}</span>` : ''}
+                  ${p ? `<span class="tag ${p.status === 'unsold' ? 'warn' : p.status === 'sold' ? 'good' : ''}">${p.status.toUpperCase()}</span>` : ''}
+                  ${!p ? '<span class="tag">No player</span>' : ''}
+                </div>
+              </div>
+              <div class="player-head" style="margin-top:0;">
+                <div class="stack" style="gap:8px;align-items:stretch;">
+                  <div class="avatar">${p ? (p.image ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}">` : '<span class="muted tiny" style="padding:12px;text-align:center;">Player</span>') : '<span class="muted tiny">—</span>'}</div>
+                </div>
+                <div>
+                  <h3 class="player-name">${p ? escapeHtml(p.name) : 'No player selected'}</h3>
+                  ${p && p.status !== 'retained' ? `
+                  <div class="player-block-hero" aria-label="Tier and role">
+                    <div class="player-block-pill player-block-pill--tier">
+                      <span class="player-block-pill__label">Tier</span>
+                      <span class="player-block-pill__value">${escapeHtml(p.tier || '—')}</span>
+                    </div>
+                    <div class="player-block-pill player-block-pill--role">
+                      <span class="player-block-pill__label">Role</span>
+                      <span class="player-block-pill__value">${escapeHtml(p.role || '—')}</span>
+                    </div>
+                  </div>` : p ? '<p class="muted tiny" style="margin-top:8px;">Retained — not on auction.</p>' : ''}
+                  <div class="muted tiny" style="margin-top:8px;">Base ${p ? p.basePrice : '-'} • Increment ${p ? inferIncrement(p.tier) : '-'}</div>
+                  <div class="kpis">
+                    <div class="kpi"><div class="l">Base</div><div class="v">${p ? p.basePrice : '-'}</div></div>
+                    <div class="kpi"><div class="l">Current bid</div><div class="v">${state.highestBid || '-'}</div></div>
+                    <div class="kpi"><div class="l">Increment</div><div class="v">${p ? inferIncrement(p.tier) : '-'}</div></div>
+                  </div>
+                  <div class="btns">
+                    <button class="btn primary" id="startAuction">Start</button>
+                    <button class="btn ghost" id="pauseAuction">${state.phase === 'paused' ? 'Resume' : 'Pause'}</button>
+                    <button class="btn ghost" id="undoAction">Undo</button>
+                    <button class="btn ghost" id="skipPlayer">Skip</button>
+                    <button class="btn good" id="sellPlayer" ${!p || !state.highestTeamId || !state.highestBid ? 'disabled' : ''}>Mark Sold</button>
+                    <button class="btn warn" id="unsoldPlayer" ${!p ? 'disabled' : ''}>Mark Unsold</button>
+                    <button class="btn red" id="resetAuction">Reset auction</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="auction-bids-row">
+            <div class="panel bid-zone">
+              <div class="space-between" style="align-items:flex-start;">
+                <h2 style="margin:0">Live bidding</h2>
+                <span class="bid-pill" title="Amount for the next valid bid">Next: ${p ? nextBidAmount() : '—'}</span>
+              </div>
+              <p class="panel-sub" style="margin-top:10px;margin-bottom:0">Teams place bids from their own dashboards. This screen updates automatically when a team bids.</p>
+              <div class="hr"></div>
+              <p class="muted tiny" style="margin:0;line-height:1.5">Give each franchise a link: <code style="font-size:12px;word-break:break-all">?view=team&amp;teamId=<em>id</em></code> (use the same <code style="font-size:12px">room</code> query as the host if you use multiple rooms).</p>
+            </div>
+            <div class="panel bid-log-panel">
+              <div class="space-between" style="flex-shrink:0;"><h2 style="margin:0">Bid log</h2><span class="badge">${state.bidHistory.length}</span></div>
+              <div class="hr"></div>
+              <div class="log-scroll">${logHtml}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(s) {
+    return String(s || '')
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#39;');
+  }
+
+  function renderTeamUrlHelp() {
+    const example = `${location.pathname}?view=team&teamId=team-1&room=${encodeURIComponent(roomId)}`;
+    return `
+      <div class="auction-page">
+        <div class="panel">
+          <h2 style="margin-top:0">Team link incomplete</h2>
+          <p class="panel-sub">Add <strong>teamId</strong> to the URL. Example:</p>
+          <p class="muted tiny" style="word-break:break-all;line-height:1.5"><code>${escapeHtml(example)}</code></p>
+        </div>
+      </div>`;
+  }
+
+  function renderTeamDashboard() {
+    const team = state.teams.find(t => t.id === teamIdFromUrl);
+    if (!team) {
+      return `
+      <div class="auction-page">
+        <div class="panel">
+          <h2 style="margin-top:0">Unknown team</h2>
+          <p class="panel-sub">No team matches <strong>${escapeHtml(teamIdFromUrl)}</strong>. Ask the host for the correct link.</p>
+        </div>
+      </div>`;
+    }
+    const p = currentPlayer();
+    const leading = leadingTeam();
+    const st = teamOwnerStatus(team);
+    const cap = maxAffordableBid(team);
+    const nextAmt = nextBidAmount();
+    const lastBidderBlocked = state.highestBid > 0 && state.highestTeamId === team.id;
+    const canBid = state.phase === 'running' && currentPlayer() && team.roster.length < state.config.teamSize && nextAmt > 0 && nextAmt <= cap && team.purse >= nextAmt && !lastBidderBlocked;
+    const maxShow = p ? cap : '—';
+
+    const logSlice = p
+      ? state.bidHistory.filter(b => b.playerId === p.id)
+      : state.bidHistory;
+    const logHtml = logSlice.map(b => `
+      <div class="log-entry">
+        <div class="log-entry__main">
+          <strong>${escapeHtml(b.teamName)}</strong>
+          <span class="muted tiny">${escapeHtml(b.playerName)}</span>
+        </div>
+        <span class="log-entry__amt">${b.amount}</span>
+      </div>
+    `).join('') || '<div class="muted" style="padding:8px 0;">No bids yet.</div>';
+
+    const size = state.config.teamSize;
+    const slots = team.roster.length;
+    const rosterInner = team.roster.length === 0
+      ? '<div class="team-strip-roster__empty">No players signed yet</div>'
+      : team.roster.map((pl) => `
+        <div class="team-strip-roster__row">
+          ${pl.image ? `<img class="team-strip-roster__pic" src="${escapeHtml(pl.image)}" alt="">` : ''}
+          <span class="team-strip-roster__nm">${escapeHtml(pl.name)}${rosterRoleParen(pl.role)}</span>
+          <span class="team-strip-roster__pr">${pl.soldPrice}</span>
+        </div>
+      `).join('');
+    const paletteStyle = teamPaletteVars(team.id);
+
+    return `
+      <div class="auction-page">
+        <div class="team-strip-wrap">
+          <p class="team-strip-wrap__title">Your team</p>
+          <div class="team-strip" style="grid-template-columns:minmax(0,1fr);max-width:420px;">
+            <div class="team-strip-card team-colorized ${st.mod}" style="${paletteStyle}" title="${escapeHtml(st.hint || team.name)}">
+              <div class="team-strip-card__name">${escapeHtml(team.name)}</div>
+              <span class="team-chip ${st.chip}">${escapeHtml(st.label)}</span>
+              <div class="team-strip-card__row"><span>Purse</span><strong>${team.purse}</strong></div>
+              <div class="team-strip-card__row"><span>Max bid</span><strong>${maxShow}</strong></div>
+              <div class="team-strip-card__row"><span>Squad</span><strong>${slots}/${size}</strong></div>
+              <div class="team-strip-roster">
+                <p class="team-strip-roster__label">Signed squad</p>
+                <div class="team-strip-roster__scroll">${rosterInner}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="auction-two-col">
+          <div class="panel current-list-panel">
+            <h2 style="margin:0 0 4px;">Current player</h2>
+            <div class="current-list__msg">${escapeHtml(state.message)}</div>
+            <div class="current-list-scroll">
+              <div class="space-between" style="align-items:flex-start;margin-bottom:10px;">
+                <h3 style="margin:0;font-size:16px;">On the block</h3>
+                <div class="tags">
+                  ${leading ? `<span class="tag good">Leading: ${escapeHtml(leading.name)}</span>` : ''}
+                  ${p ? `<span class="tag ${p.status === 'unsold' ? 'warn' : p.status === 'sold' ? 'good' : ''}">${p.status.toUpperCase()}</span>` : ''}
+                  ${!p ? '<span class="tag">No player</span>' : ''}
+                </div>
+              </div>
+              <div class="player-head" style="margin-top:0;">
+                <div class="stack" style="gap:8px;align-items:stretch;">
+                  <div class="avatar">${p ? (p.image ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}">` : '<span class="muted tiny" style="padding:12px;text-align:center;">Player</span>') : '<span class="muted tiny">—</span>'}</div>
+                </div>
+                <div>
+                  <h3 class="player-name">${p ? escapeHtml(p.name) : 'No player selected'}</h3>
+                  ${p && p.status !== 'retained' ? `
+                  <div class="player-block-hero" aria-label="Tier and role">
+                    <div class="player-block-pill player-block-pill--tier">
+                      <span class="player-block-pill__label">Tier</span>
+                      <span class="player-block-pill__value">${escapeHtml(p.tier || '—')}</span>
+                    </div>
+                    <div class="player-block-pill player-block-pill--role">
+                      <span class="player-block-pill__label">Role</span>
+                      <span class="player-block-pill__value">${escapeHtml(p.role || '—')}</span>
+                    </div>
+                  </div>` : p ? '<p class="muted tiny" style="margin-top:8px;">Retained — not on auction.</p>' : ''}
+                  <div class="muted tiny" style="margin-top:8px;">Base ${p ? p.basePrice : '-'} • Increment ${p ? inferIncrement(p.tier) : '-'}</div>
+                  <div class="kpis">
+                    <div class="kpi"><div class="l">Base</div><div class="v">${p ? p.basePrice : '-'}</div></div>
+                    <div class="kpi"><div class="l">Current bid</div><div class="v">${state.highestBid || '-'}</div></div>
+                    <div class="kpi"><div class="l">Increment</div><div class="v">${p ? inferIncrement(p.tier) : '-'}</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="auction-bids-row">
+            <div class="panel bid-zone">
+              <div class="space-between" style="align-items:flex-start;">
+                <h2 style="margin:0">Place your bid</h2>
+                <span class="bid-pill" title="Amount for the next valid bid">Next: ${p ? nextBidAmount() : '—'}</span>
+              </div>
+              <div class="hr"></div>
+              <div class="panel-fill" style="flex:1;min-height:0;overflow-y:auto;">
+                <button type="button" class="btn team-bid-btn ${state.highestTeamId === team.id ? 'primary' : 'ghost'}" style="${paletteStyle};width:100%;justify-content:center;" id="teamBidNext" ${canBid ? '' : 'disabled'}>${escapeHtml(team.name)} — bid ${p ? nextBidAmount() : '—'} <span class="tiny muted">(max ${maxShow})</span></button>
+                <div class="row" style="margin-top:12px;align-items:flex-end;">
+                  <div style="flex:1;min-width:120px;">
+                    <div class="tiny muted">Custom amount</div>
+                    <input class="input" type="text" inputmode="numeric" id="teamCustomBid" placeholder="Amount" autocomplete="off">
+                  </div>
+                  <button type="button" class="btn ghost" id="teamCustomBidBtn">Bid</button>
+                </div>
+                <p class="muted tiny" style="margin-top:12px;margin-bottom:0;line-height:1.45">${escapeHtml(st.hint || '')}</p>
+              </div>
+            </div>
+            <div class="panel bid-log-panel">
+              <div class="space-between" style="flex-shrink:0;"><h2 style="margin:0">${p ? 'Bids on this player' : 'Recent bids'}</h2><span class="badge">${logSlice.length}</span></div>
+              <div class="hr"></div>
+              <div class="log-scroll">${logHtml}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function updateViewSubtitle() {
+    const el = $('#viewSubtitle');
+    if (!el) return;
+    if (showTeamUrlHelp) {
+      el.textContent = 'Team dashboard — add teamId to the URL';
+    } else if (showTeamDashboard) {
+      const tm = state.teams.find(t => t.id === teamIdFromUrl);
+      el.textContent = tm ? `Team dashboard — ${tm.name}` : `Team dashboard — ${teamIdFromUrl}`;
+    } else {
+      el.textContent = 'Auctioneer — host controls (teams use separate links)';
+    }
+  }
+
+  function renderMain() {
+    updateViewSubtitle();
+    if (showTeamUrlHelp) {
+      $('#mainArea').innerHTML = renderTeamUrlHelp();
+      return;
+    }
+    if (showTeamDashboard) {
+      $('#mainArea').innerHTML = renderTeamDashboard();
+      return;
+    }
+    $('#mainArea').innerHTML = renderAuctioneer();
+  }
+
+  function render() {
+    renderMain();
+  }
+
+  // Event delegation
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#startAuction')) { void startAuction(); return; }
+    if (e.target.closest('#pauseAuction')) { void pauseResume(); return; }
+    if (e.target.closest('#undoAction')) { void undo(); return; }
+    if (e.target.closest('#skipPlayer')) { void skipCurrent(); return; }
+    if (e.target.closest('#sellPlayer')) { void sellCurrent(); return; }
+    if (e.target.closest('#unsoldPlayer')) { void markUnsold(); return; }
+    if (e.target.closest('#resetAuction')) { void resetAll(); return; }
+    if (e.target.closest('#teamBidNext')) {
+      void bid(teamIdFromUrl);
+      return;
+    }
+    if (e.target.closest('#teamCustomBidBtn')) {
+      const rawAmount = $('#teamCustomBid') && $('#teamCustomBid').value;
+      const amount = parseBidAmountInput(rawAmount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        pushLog('Enter a valid custom bid amount.');
+        return;
+      }
+      void bid(teamIdFromUrl, amount);
+      return;
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!enableHostShortcuts) return;
+    if (e.key === ' ') {
+      const t = e.target;
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT') return;
+      e.preventDefault();
+      void pauseResume();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      void undo();
+    }
+  });
+
+  updateViewSubtitle();
+  void bootstrap();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "cricket-auction-full",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "stop-server": "powershell -ExecutionPolicy Bypass -File ./stop-server.ps1"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}
