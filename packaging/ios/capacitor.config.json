@@ -1,0 +1,20 @@
+{
+  "appId": "com.swapnil.cricketauction",
+  "appName": "Cricket Auction",
+  "webDir": "www",
+  "server": {
+    "url": "https://REPLACE_WITH_YOUR_DOMAIN.onrender.com",
+    "cleartext": false
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#050d18"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#050d18",
+      "showSpinner": false
+    }
+  }
+}

@@ -317,6 +317,12 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(ROOT, 'index.html'));
 });
 app.use('/images', express.static(path.join(ROOT, 'images')));
+// express.static ignores dotfiles by default (e.g. GET /foo/.bar -> 404), which would
+// break Android's Digital Asset Links / Apple's Universal Links verification files —
+// both must be served from a literal /.well-known/ path. Mounting the static handler
+// AT that prefix serves everything under public/.well-known/ normally, since the
+// dotfile check only looks at the path *under* the mount root, not the mount itself.
+app.use('/.well-known', express.static(path.join(ROOT, 'public', '.well-known')));
 app.use(express.static(path.join(ROOT, 'public')));
 
 const server = http.createServer(app);

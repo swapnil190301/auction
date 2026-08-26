@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Policy — Cricket Auction</title>
+<meta name="theme-color" content="#050d18" />
+<link rel="icon" href="/icons/favicon-64.png" />
+<style>
+  :root{
+    --bg:#050d18; --panel:#0c1628; --card:#111f36; --border:#243d5c;
+    --text:#eef4ff; --muted:#94a8c4; --accent:#4db8ff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(ellipse 120% 80% at 50% -20%, #153a5c 0%, var(--bg) 55%);
+    color:var(--text); line-height:1.6; font-size:16px;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:40px 20px 80px;}
+  a{color:var(--accent)}
+  h1{font-size:28px; margin-bottom:4px;}
+  .updated{color:var(--muted); font-size:14px; margin-bottom:32px;}
+  h2{font-size:19px; margin-top:36px; border-bottom:1px solid var(--border); padding-bottom:8px;}
+  p, li{color:#dbe6f5;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin:16px 0;}
+  code{background:var(--panel); padding:2px 6px; border-radius:6px; font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Privacy Policy</h1>
+  <p class="updated">Live Cricket Auction — last updated August 2026</p>
+
+  <p>This app runs a live, room-based cricket auction. This page explains what information it collects, why, and how it's stored. If anything here is unclear, contact the person who deployed/operates this instance of the app (the "operator") — see the contact note at the bottom.</p>
+
+  <h2>What we collect</h2>
+  <div class="card">
+    <p><strong>If you create a player account</strong> (to register yourself for auctions): a username, a password (never stored in plain text — it's hashed with scrypt before saving), your name, age, playing role, and an optional profile photo you upload.</p>
+  </div>
+  <div class="card">
+    <p><strong>If you create or join an auction room</strong>: the room name, team names, and auction settings you choose (purse, tiers, squad size). Rooms are protected by short PIN codes rather than personal logins — a Host PIN, one PIN per team, and a Player PIN, all generated randomly.</p>
+  </div>
+  <div class="card">
+    <p><strong>While an auction runs</strong>: bid amounts, which team bid what and when, and the resulting sale price/team for each player — this is the auction's own record, visible to everyone in that room.</p>
+  </div>
+  <p>We do not collect payment information, precise location, contacts, or device identifiers, and this app does not use advertising or third-party analytics/tracking SDKs.</p>
+
+  <h2>How it's stored</h2>
+  <p>Everything above is stored in a single database file on the server this instance is deployed to. Player photos are stored as part of that same database (not uploaded to a separate third-party image host). There is no data sharing with outside companies.</p>
+
+  <h2>How it's used</h2>
+  <p>Account details exist solely so a player's profile carries over between auctions instead of being re-entered each time, and so they can log back in on a different device. Room PINs exist solely to control who can view or act in a given auction room. None of this information is used for advertising, profiling, or sold to anyone.</p>
+
+  <h2>Who can see what</h2>
+  <ul>
+    <li>Anyone with a room's Room ID can see that room's live auction (teams, players, bids) in read-only spectator mode — this is by design, the same way an in-person auction is visible to everyone in the room.</li>
+    <li>Your player account's saved profile (username, password) is never shown to other players — only the name/age/role/photo you choose to bring into a room is visible there.</li>
+    <li>The person running a room (the "host") can see and manage everything happening inside that specific room, including approving or rejecting player registrations.</li>
+  </ul>
+
+  <h2>Your choices</h2>
+  <ul>
+    <li>A profile photo is optional — you can register without one.</li>
+    <li>You can change your role/age just for a specific room without changing your saved account profile.</li>
+    <li>To remove your account or data, contact the operator of the specific instance you signed up on (see below) — this app does not currently have a self-service delete-account flow.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>This app is intended for general audiences running or joining casual sports auctions (e.g. a friends' league) and is not directed at children under 13. Account age fields are self-reported and used only for auction context (e.g. junior categories), not for age verification.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If this policy changes, the "last updated" date above will change accordingly.</p>
+
+  <h2>Contact</h2>
+  <p>This page describes the app's data handling in general. For questions about a specific deployed instance (e.g. what happens to your data on a particular Room ID), contact whoever shared that Room ID/link with you, as they are operating that instance.</p>
+</div>
+</body>
+</html>
