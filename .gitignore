@@ -1,0 +1,7 @@
+node_modules/
+data/.session-secret
+data/app.db
+data/app.db-wal
+data/app.db-shm
+data/auction-snapshot.json
+data/accounts.json

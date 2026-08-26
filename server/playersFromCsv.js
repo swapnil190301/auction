@@ -2,25 +2,13 @@
 
 const fs = require('fs');
 const path = require('path');
-
-const {
-  roles,
-  tiers,
-  teamNames,
-  defaultConfig,
-  ROLE_PURSE_CUT,
-  sampleNamesFallback,
-  PLAYERS_CSV_FILE,
-} = require('./auctionConfig');
+const { roles, tiers, defaultConfig, ROLE_PURSE_CUT } = require('./auctionConfig');
 const { assignPlayerImages } = require('./playerImages');
-
-function uid(prefix = 'id') {
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
-}
+const { uid } = require('./idgen');
 
 function cleanCell(s) {
   return String(s || '')
-    .replace(/^\uFEFF/, '')
+    .replace(/^﻿/, '')
     .trim();
 }
 
@@ -67,7 +55,7 @@ function parseCsvLine(line) {
 
 function parseCsv(text) {
   const lines = String(text || '')
-    .replace(/^\uFEFF/, '')
+    .replace(/^﻿/, '')
     .split(/\r?\n/)
     .filter((ln) => ln.trim() !== '');
   return lines.map(parseCsvLine);
@@ -87,8 +75,9 @@ function normalizeRole(raw) {
   return '';
 }
 
-function inferBase(tier) {
-  return defaultConfig.basePrices[tier] || defaultConfig.basePrices.C;
+function inferBase(tier, basePrices) {
+  const prices = basePrices || defaultConfig.basePrices;
+  return prices[tier] || prices.C;
 }
 
 function teamLetterToIndex(letter) {
@@ -99,7 +88,7 @@ function teamLetterToIndex(letter) {
   return L.charCodeAt(0) - 65;
 }
 
-function teamRefToIndex(teamRef) {
+function teamRefToIndex(teamRef, teamNames) {
   const raw = String(teamRef || '').trim();
   if (!raw) return -1;
 
@@ -116,11 +105,13 @@ function teamRefToIndex(teamRef) {
 }
 
 /**
- * Reads tournament CSV: name,role,tier,team
- * Captains / icons / owners can use team letter (A–F) or team name in "team" column.
+ * Reads a tournament CSV: name,role,tier,team[,wallet]
+ * Captains / icons / owners can use team letter (A–F...) or team name in the "team" column.
+ * @param {string[][]} rows
+ * @param {string[]} teamNames
  * @returns {{ auctionRows: { name: string, role: string, tier: string }[], retained: { name: string, role: 'Captain'|'Icon', teamIndex: number }[], owners: { name: string, teamIndex: number }[] }}
  */
-function parseTournamentCsvRows(rows) {
+function parseTournamentCsvRows(rows, teamNames) {
   if (!rows.length) {
     return { auctionRows: [], retained: [], owners: [] };
   }
@@ -141,7 +132,7 @@ function parseTournamentCsvRows(rows) {
 
     const r = normalizeRole(roleRaw);
     if (r === 'Owner') {
-      const teamIndex = teamRefToIndex(teamRaw);
+      const teamIndex = teamRefToIndex(teamRaw, teamNames);
       if (teamIndex < 0 || teamIndex >= teamNames.length) {
         throw new Error(
           `Invalid team "${teamRaw}" for Owner "${name}" (use A–${String.fromCharCode(65 + teamNames.length - 1)} or one of: ${teamNames.join(', ')}).`
@@ -151,7 +142,7 @@ function parseTournamentCsvRows(rows) {
       continue;
     }
     if (r === 'Captain' || r === 'Icon') {
-      const teamIndex = teamRefToIndex(teamRaw);
+      const teamIndex = teamRefToIndex(teamRaw, teamNames);
       if (teamIndex < 0 || teamIndex >= teamNames.length) {
         throw new Error(
           `Invalid team "${teamRaw}" for ${r} "${name}" (use A–${String.fromCharCode(65 + teamNames.length - 1)} or one of: ${teamNames.join(', ')}).`
@@ -177,14 +168,12 @@ function parseTournamentCsvRows(rows) {
   return { auctionRows, retained, owners };
 }
 
-function loadTournamentCsv(filePath) {
-  const abs = path.isAbsolute(filePath) ? filePath : path.join(__dirname, '..', filePath);
-  const text = fs.readFileSync(abs, 'utf8');
+function parseCsvText(text, teamNames) {
   const rows = parseCsv(text);
-  return parseTournamentCsvRows(rows);
+  return parseTournamentCsvRows(rows, teamNames);
 }
 
-function makeAuctionPlayer(row) {
+function makeAuctionPlayer(row, basePrices) {
   const tier = tiers.includes(row.tier) ? row.tier : 'C';
   const role = roles.includes(row.role) ? row.role : 'Batter';
   return {
@@ -192,7 +181,7 @@ function makeAuctionPlayer(row) {
     name: row.name,
     role,
     tier,
-    basePrice: inferBase(tier),
+    basePrice: inferBase(tier, basePrices),
     image: '',
     status: 'pending',
     soldTo: '',
@@ -200,14 +189,15 @@ function makeAuctionPlayer(row) {
   };
 }
 
-function makeRetainedPlayer(entry, teamNameStr) {
+function makeRetainedPlayer(entry, teamNameStr, roleCuts) {
+  const cuts = roleCuts || ROLE_PURSE_CUT;
   const roleCut =
     entry && entry.role === 'Owner'
-      ? ROLE_PURSE_CUT.owner
+      ? cuts.owner
       : entry && entry.role === 'Captain'
-        ? ROLE_PURSE_CUT.captain
+        ? cuts.captain
         : entry && entry.role === 'Icon'
-          ? ROLE_PURSE_CUT.icon
+          ? cuts.icon
           : 0;
   return {
     id: uid('p'),
@@ -224,11 +214,18 @@ function makeRetainedPlayer(entry, teamNameStr) {
 }
 
 /**
- * Build players list and team rosters from CSV parse result.
+ * Build players list and team rosters from a CSV parse result.
+ * @param {{auctionRows, retained, owners}} parsed
+ * @param {string[]} teamNames
+ * @param {{ purse:number, basePrices:object }} config
+ * @param {{owner:number, captain:number, icon:number}} roleCuts
+ * @param {string} imagesDir
  */
-function buildPlayersAndTeamRosters(parsed) {
+function buildPlayersAndTeamRosters(parsed, teamNames, config, roleCuts, imagesDir) {
   const { auctionRows, retained, owners = [] } = parsed;
-  const auctionPlayers = auctionRows.map(makeAuctionPlayer);
+  const cfg = config || defaultConfig;
+  const cuts = roleCuts || ROLE_PURSE_CUT;
+  const auctionPlayers = auctionRows.map((row) => makeAuctionPlayer(row, cfg.basePrices));
 
   const ownerByTeam = new Map();
   for (const o of owners) {
@@ -238,12 +235,12 @@ function buildPlayersAndTeamRosters(parsed) {
     ownerByTeam.set(o.teamIndex, o.name);
   }
 
-  const basePurse = defaultConfig.purse;
+  const basePurse = cfg.purse;
   const teamPurses = teamNames.map((_, idx) => {
     let p = basePurse;
-    if (ownerByTeam.has(idx)) p -= ROLE_PURSE_CUT.owner;
-    if (retained.some((x) => x.role === 'Captain' && x.teamIndex === idx)) p -= ROLE_PURSE_CUT.captain;
-    if (retained.some((x) => x.role === 'Icon' && x.teamIndex === idx)) p -= ROLE_PURSE_CUT.icon;
+    if (ownerByTeam.has(idx)) p -= cuts.owner;
+    if (retained.some((x) => x.role === 'Captain' && x.teamIndex === idx)) p -= cuts.captain;
+    if (retained.some((x) => x.role === 'Icon' && x.teamIndex === idx)) p -= cuts.icon;
     return Math.max(0, p);
   });
 
@@ -260,9 +257,9 @@ function buildPlayersAndTeamRosters(parsed) {
     const roster = [];
     const tname = teamNames[idx];
     const ownerName = ownerByTeam.get(idx);
-    if (ownerName) roster.push(makeRetainedPlayer({ name: ownerName, role: 'Owner' }, tname));
-    if (caps[0]) roster.push(makeRetainedPlayer(caps[0], tname));
-    if (icons[0]) roster.push(makeRetainedPlayer(icons[0], tname));
+    if (ownerName) roster.push(makeRetainedPlayer({ name: ownerName, role: 'Owner' }, tname, cuts));
+    if (caps[0]) roster.push(makeRetainedPlayer(caps[0], tname, cuts));
+    if (icons[0]) roster.push(makeRetainedPlayer(icons[0], tname, cuts));
     return roster;
   });
 
@@ -271,48 +268,34 @@ function buildPlayersAndTeamRosters(parsed) {
   const players = [...auctionPlayers, ...retainedPlayers];
   const queue = auctionPlayers.map((p) => p.id);
 
-  assignPlayerImages(players, path.join(__dirname, '..', 'images'));
+  if (imagesDir) assignPlayerImages(players, imagesDir);
 
   return { players, queue, teamsRosterTemplate, teamPurses };
 }
 
-function loadStateFromCsvFile(csvRelativePath) {
-  const parsed = loadTournamentCsv(csvRelativePath);
-  return buildPlayersAndTeamRosters(parsed);
+function loadTournamentCsvFile(filePath, teamNames) {
+  const text = fs.readFileSync(filePath, 'utf8');
+  return parseCsvText(text, teamNames);
 }
 
-function loadStateFromFallbackNames(names) {
-  const auctionRows = names.map((name, i) => ({
-    name: String(name).trim(),
-    role: roles[i % roles.length],
-    tier: tiers[i % tiers.length],
-  }));
-  return buildPlayersAndTeamRosters({ auctionRows, retained: [], owners: [] });
-}
-
-function tryLoadInitialPlayers() {
-  if (!PLAYERS_CSV_FILE) {
-    return loadStateFromFallbackNames(sampleNamesFallback);
-  }
-  const csvPath = path.join(__dirname, '..', PLAYERS_CSV_FILE);
-  if (!fs.existsSync(csvPath)) {
-    console.warn(`[auction] CSV not found: ${PLAYERS_CSV_FILE} — using fallback names from auctionConfig.js`);
-    return loadStateFromFallbackNames(sampleNamesFallback);
-  }
-  try {
-    return loadStateFromCsvFile(PLAYERS_CSV_FILE);
-  } catch (err) {
-    console.error('[auction] Failed to parse CSV:', err.message);
-    console.warn('[auction] Using fallback names from auctionConfig.js');
-    return loadStateFromFallbackNames(sampleNamesFallback);
-  }
+/** Quick-list mode: one name per line, tier/role assigned round-robin (A/B/C, Batter/Bowler/All-rounder). */
+function buildAuctionRowsFromNames(names) {
+  return names
+    .map((n) => String(n || '').trim())
+    .filter(Boolean)
+    .map((name, i) => ({
+      name,
+      role: roles[i % roles.length],
+      tier: tiers[i % tiers.length],
+    }));
 }
 
 module.exports = {
   parseCsv,
+  parseCsvText,
   parseTournamentCsvRows,
-  loadTournamentCsv,
+  loadTournamentCsvFile,
   buildPlayersAndTeamRosters,
-  tryLoadInitialPlayers,
-  uid,
+  buildAuctionRowsFromNames,
+  path,
 };

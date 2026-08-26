@@ -98,6 +98,7 @@ function assignPlayerImages(players, imagesDir) {
   const used = new Set();
 
   for (const p of players) {
+    if (p.image) continue; // never clobber a photo already set (e.g. a player's own uploaded profile photo)
     const nP = normalizeName(p.name);
     const exactMatches = files.filter((f) => {
       if (used.has(f)) return false;

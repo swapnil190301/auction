@@ -1,17 +1,31 @@
 'use strict';
 
 /**
- * One-shot: rename files in ../images to match CSV player names (cleaned).
+ * One-shot: rename files in ../images to match names from a player CSV (cleaned).
  * Uses the same pairing as assignPlayerImages (first matching player wins).
- * Run: node server/renameImagesToPlayerNames.js
+ * Run: node server/renameImagesToPlayerNames.js [path/to/players.csv]
+ * Defaults to cricket-players-my-tournament-2026-03-23.csv in the project root if present.
+ * This is a standalone dev utility — it does not read or write any room's live state.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { tryLoadInitialPlayers } = require('./playersFromCsv');
+const { parseCsvText } = require('./playersFromCsv');
 const { namesMatch, pickBestFile } = require('./playerImages');
 
 const IMAGES_DIR = path.join(__dirname, '..', 'images');
+const DEFAULT_CSV = path.join(__dirname, '..', 'cricket-players-my-tournament-2026-03-23.csv');
+// A generous placeholder team list so any team letter referenced by OWNER/CAPTAIN/ICON rows
+// in the CSV resolves without error — this script only needs player *names*, not real teams.
+const PLACEHOLDER_TEAM_NAMES = Array.from({ length: 26 }, (_, i) => `Team ${String.fromCharCode(65 + i)}`);
+
+function loadPlayersFromCsvFile(csvPath) {
+  const text = fs.readFileSync(csvPath, 'utf8');
+  const parsed = parseCsvText(text, PLACEHOLDER_TEAM_NAMES);
+  const auctionPlayers = parsed.auctionRows.map((r) => ({ name: r.name }));
+  const retainedPlayers = [...parsed.retained, ...parsed.owners].map((r) => ({ name: r.name }));
+  return [...auctionPlayers, ...retainedPlayers];
+}
 
 function safeWinFileName(name) {
   let t = String(name)
@@ -33,7 +47,12 @@ function listImageFiles() {
 }
 
 function main() {
-  const { players } = tryLoadInitialPlayers();
+  const csvPath = process.argv[2] ? path.resolve(process.argv[2]) : DEFAULT_CSV;
+  if (!fs.existsSync(csvPath)) {
+    console.error(`CSV not found: ${csvPath}\nUsage: node server/renameImagesToPlayerNames.js [path/to/players.csv]`);
+    process.exit(1);
+  }
+  const players = loadPlayersFromCsvFile(csvPath);
   const files = listImageFiles();
   const used = new Set();
   const reservedTargets = new Set();

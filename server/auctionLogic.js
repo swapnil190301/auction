@@ -1,21 +1,11 @@
 'use strict';
 
 const path = require('path');
-const {
-  TEAM_SIZE,
-  defaultConfig,
-  teamNames,
-  roles,
-  tiers,
-} = require('./auctionConfig');
-const { tryLoadInitialPlayers } = require('./playersFromCsv');
+const { roles, tiers, ROLE_PURSE_CUT } = require('./auctionConfig');
 const { assignPlayerImages } = require('./playerImages');
+const { uid } = require('./idgen');
 
 const IMAGES_DIR = path.join(__dirname, '..', 'images');
-
-function uid(prefix = 'id') {
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
-}
 
 const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 
@@ -31,32 +21,50 @@ function inferRole(i) {
   return roles[i % roles.length];
 }
 
-function inferBase(tier) {
-  return defaultConfig.basePrices[tier];
+/** Reads base price for a tier from the *room's own* config, never a global default. */
+function inferBase(tier, config) {
+  return (config && config.basePrices && config.basePrices[tier]) || 0;
 }
 
-function inferIncrement(tier) {
-  return defaultConfig.increments[tier];
+/** Reads bid increment for a tier from the *room's own* config, never a global default. */
+function inferIncrement(tier, config) {
+  return (config && config.increments && config.increments[tier]) || 0;
 }
 
-function makeDefaultTeams(rostersPreset = null, teamPurses = null) {
+/**
+ * Builds the `teams` array for a fresh room from its (already-validated) setup pieces.
+ * Pure function of its arguments — no filesystem/config reads — so every room's
+ * teams/purses/rosters come only from what was submitted when the room was created.
+ * @param {string[]} teamNames
+ * @param {number} defaultPurse
+ * @param {Array[]} rostersPreset - per-team array of pre-retained players (owner/captain/icon), or null
+ * @param {number[]} teamPurses - per-team starting purse after retained-role deductions, or null
+ */
+function makeTeamsFromSetup(teamNames, defaultPurse, rostersPreset = null, teamPurses = null) {
   return teamNames.map((name, idx) => ({
     id: `team-${idx + 1}`,
     name,
-    purse:
-      teamPurses && Number.isFinite(teamPurses[idx]) ? teamPurses[idx] : defaultConfig.purse,
+    purse: teamPurses && Number.isFinite(teamPurses[idx]) ? teamPurses[idx] : defaultPurse,
     roster: rostersPreset && rostersPreset[idx] ? rostersPreset[idx] : [],
   }));
 }
 
-function makeInitialState() {
-  const loaded = tryLoadInitialPlayers();
-  const { players, queue, teamsRosterTemplate, teamPurses } = loaded;
+/**
+ * Assembles a full auction state from a room's config + team names + the
+ * players/queue/rosters produced by roomSetup.buildFromSetup(). This is the
+ * only place a room's state is created, whether at room creation or on
+ * "Reset auction" — both call it with the room's own stored setup.
+ * @param {object} config - { purse, basePrices, increments, teamSize }
+ * @param {string[]} teamNames
+ * @param {{ players, queue, teamsRosterTemplate, teamPurses }} built
+ */
+function makeInitialState(config, teamNames, built) {
+  const { players, queue, teamsRosterTemplate, teamPurses } = built;
   const firstAuction = players.find((p) => p.status !== 'retained');
   return {
-    config: deepClone(defaultConfig),
+    config: deepClone(config),
     players,
-    teams: makeDefaultTeams(teamsRosterTemplate, teamPurses),
+    teams: makeTeamsFromSetup(teamNames, config.purse, teamsRosterTemplate, teamPurses),
     queue,
     unsoldQueue: [],
     currentPlayerId: queue[0] || '',
@@ -81,7 +89,7 @@ function leadingTeam(state) {
 function nextBidAmount(state) {
   const p = currentPlayer(state);
   if (!p) return 0;
-  return state.highestBid > 0 ? state.highestBid + inferIncrement(p.tier) : p.basePrice;
+  return state.highestBid > 0 ? state.highestBid + inferIncrement(p.tier, state.config) : p.basePrice;
 }
 
 /**
@@ -304,11 +312,10 @@ function processAction(state, history, action, payload = {}) {
     }
 
     case 'reset': {
-      return {
-        ok: true,
-        state: { ...makeInitialState(), message: 'Auction reset' },
-        history: [],
-      };
+      // Rebuilding from a room's original setup (CSV/list + config) needs data this
+      // module never sees. The server layer (rooms.js) intercepts 'reset' before it
+      // reaches here and calls makeInitialState() again with the room's stored setup.
+      return { ok: false, error: 'Reset must be handled by the room layer.' };
     }
 
     case 'importRows': {
@@ -322,7 +329,7 @@ function processAction(state, history, action, payload = {}) {
           name,
           role: inferRole(i),
           tier,
-          basePrice: inferBase(tier),
+          basePrice: inferBase(tier, state.config),
           image: '',
           status: 'pending',
           soldTo: '',
@@ -428,20 +435,23 @@ function processAction(state, history, action, payload = {}) {
     }
 
     case 'addPlayer': {
-      const { name, role: r, tier: tr } = payload;
+      const { name, role: r, tier: tr, image, age, accountId } = payload;
       if (!name || !String(name).trim()) return { ok: false, error: 'Name required.' };
       const validTier = tiers.includes(tr) ? tr : 'C';
       const validRole = roles.includes(r) ? r : 'Batter';
+      const validAge = Number(age);
       const player = {
         id: uid('p'),
         name: String(name).trim(),
         role: validRole,
         tier: validTier,
-        basePrice: inferBase(validTier),
-        image: '',
+        basePrice: inferBase(validTier, state.config),
+        image: typeof image === 'string' ? image : '',
         status: 'pending',
         soldTo: '',
         soldPrice: 0,
+        ...(Number.isFinite(validAge) && validAge > 0 ? { age: validAge } : {}),
+        ...(accountId ? { accountId: String(accountId) } : {}),
       };
       const players = [...state.players, player];
       assignPlayerImages(players, IMAGES_DIR);
@@ -490,6 +500,16 @@ function processAction(state, history, action, payload = {}) {
       };
     }
 
+    case 'setTeamSize': {
+      const size = Number(payload.teamSize);
+      if (!Number.isFinite(size) || size <= 0) return { ok: false, error: 'Invalid squad size.' };
+      return {
+        ok: true,
+        state: { ...state, config: { ...state.config, teamSize: size }, message: 'Squad size updated' },
+        history,
+      };
+    }
+
     case 'updateConfigPurse': {
       const purse = Number(payload.purse);
       if (!Number.isFinite(purse)) return { ok: false, error: 'Invalid purse.' };
@@ -505,6 +525,114 @@ function processAction(state, history, action, payload = {}) {
       };
     }
 
+    case 'reorderQueue': {
+      const nextQueue = payload.queue;
+      if (!Array.isArray(nextQueue) || !nextQueue.length) return { ok: false, error: 'Invalid order.' };
+      const current = new Set(state.queue);
+      if (nextQueue.length !== state.queue.length || !nextQueue.every((id) => current.has(id))) {
+        return { ok: false, error: 'That order no longer matches the pool — refresh and try again.' };
+      }
+      const nextState = { ...state, queue: nextQueue };
+      // Only jump the "on the block" player to match the new order before the
+      // auction has actually started; once running, reordering the upcoming
+      // pool shouldn't disturb whoever is currently up for bids.
+      if (state.phase === 'setup') {
+        nextState.currentPlayerId = nextQueue[0];
+        nextState.selectedPlayerId = nextQueue[0];
+      }
+      return { ok: true, state: { ...nextState, message: 'Player sequence updated' }, history };
+    }
+
+    case 'retainPlayer': {
+      const { playerId, teamId, role: r } = payload;
+      const retainRole = ['Owner', 'Captain', 'Icon'].includes(r) ? r : null;
+      if (!retainRole) return { ok: false, error: 'Role must be Owner, Captain, or Icon.' };
+      const player = state.players.find((p) => p.id === playerId);
+      if (!player || player.status !== 'pending') {
+        return { ok: false, error: 'Only a player still in the pool can be pre-assigned to a team.' };
+      }
+      const team = state.teams.find((t) => t.id === teamId);
+      if (!team) return { ok: false, error: 'Invalid team.' };
+      const already = team.roster.find((p) => p.status === 'retained' && p.role === retainRole);
+      if (already) {
+        return { ok: false, error: `${team.name} already has ${already.name} as ${retainRole.toLowerCase()}.` };
+      }
+      const cuts = state.config.roleCuts || ROLE_PURSE_CUT;
+      const cut = cuts[retainRole.toLowerCase()] || 0;
+      const retained = {
+        ...player,
+        role: retainRole,
+        tier: '',
+        basePrice: 0,
+        status: 'retained',
+        soldTo: team.name,
+        soldPrice: cut,
+      };
+      const players = state.players.map((p) => (p.id === playerId ? retained : p));
+      const teams = state.teams.map((t) =>
+        t.id === teamId ? { ...t, purse: Math.max(0, t.purse - cut), roster: [...t.roster, retained] } : t
+      );
+      let queue = state.queue.filter((id) => id !== playerId);
+      let unsoldQueue = state.unsoldQueue.filter((id) => id !== playerId);
+      let currentPlayerId = state.currentPlayerId;
+      let selectedPlayerId = state.selectedPlayerId;
+      if (currentPlayerId === playerId) currentPlayerId = queue[0] || unsoldQueue[0] || '';
+      if (selectedPlayerId === playerId) selectedPlayerId = currentPlayerId;
+      return {
+        ok: true,
+        state: {
+          ...state,
+          players,
+          teams,
+          queue,
+          unsoldQueue,
+          currentPlayerId,
+          selectedPlayerId,
+          message: `${player.name} pre-assigned to ${team.name} as ${retainRole}`,
+        },
+        history,
+      };
+    }
+
+    case 'unretainPlayer': {
+      const { playerId } = payload;
+      const player = state.players.find((p) => p.id === playerId);
+      if (!player || player.status !== 'retained') {
+        return { ok: false, error: 'That player is not pre-assigned to a team.' };
+      }
+      const team = state.teams.find((t) => t.roster.some((p) => p.id === playerId));
+      const fallbackTier = tiers[0];
+      const restored = {
+        ...player,
+        role: roles[0],
+        tier: fallbackTier,
+        basePrice: inferBase(fallbackTier, state.config),
+        status: 'pending',
+        soldTo: '',
+        soldPrice: 0,
+      };
+      const players = state.players.map((p) => (p.id === playerId ? restored : p));
+      const teams = state.teams.map((t) =>
+        t.id === (team && team.id)
+          ? { ...t, purse: t.purse + (player.soldPrice || 0), roster: t.roster.filter((p) => p.id !== playerId) }
+          : t
+      );
+      const queue = [...state.queue, playerId];
+      let currentPlayerId = state.currentPlayerId || playerId;
+      return {
+        ok: true,
+        state: {
+          ...state,
+          players,
+          teams,
+          queue,
+          currentPlayerId,
+          message: `${player.name} moved back into the auction pool — double-check their role, tier and base price.`,
+        },
+        history,
+      };
+    }
+
     default:
       return { ok: false, error: `Unknown action: ${action}` };
   }
@@ -512,14 +640,13 @@ function processAction(state, history, action, payload = {}) {
 
 module.exports = {
   makeInitialState,
+  makeTeamsFromSetup,
   processAction,
   inferIncrement,
+  inferBase,
   nextBidAmount,
   minPurseReserveForFutureSlots,
   maxAffordableBid,
-  TEAM_SIZE,
-  defaultConfig,
-  teamNames,
   roles,
   tiers,
 };

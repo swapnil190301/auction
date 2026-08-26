@@ -1,14 +1,17 @@
 'use strict';
 
 /**
- * Edit this file to tune the auction for your machine, then restart the server.
- * Purse / base prices / increments apply to new loads and after “Reset auction”.
+ * Defaults offered when someone fills in the "Create room" form.
+ * Nothing here is loaded automatically at server start any more — every room
+ * is created explicitly through the UI (or POST /api/rooms) with its own
+ * name, teams, purse, tiers and player list. Editing this file only changes
+ * the *suggested* starting values shown on the create-room form.
  */
 
-/** Max players per team (squad size cap). */
+/** Max players per team (squad size cap) suggested by default. */
 const TEAM_SIZE = 10;
 
-/** Starting purse for each team (same for all teams). */
+/** Starting purse for each team, suggested by default. */
 const DEFAULT_PURSE = 10000;
 
 /** Deducted from team purse when the role is filled (see CSV OWNER / CAPTAIN / ICON rows). */
@@ -21,21 +24,15 @@ const defaultConfig = {
   teamSize: TEAM_SIZE,
 };
 
-/** One name per team; length determines how many teams exist. */
-const teamNames = ['HG Supreme', 'HG Indians', 'HG Knight Strikers', 'HG Revengers', 'HG Master Blaster', 'HG Stars'];
+/** Suggested team names shown when someone starts a new room; fully editable in the create-room form. */
+const suggestedTeamNames = ['Team 1', 'Team 2', 'Team 3', 'Team 4', 'Team 5', 'Team 6'];
 
 const roles = ['Batter', 'Bowler', 'All-rounder'];
 const tiers = ['A', 'B', 'C'];
 
-/**
- * Player list at server start and after “Reset auction”.
- * Place the file next to package.json (project root). Restart the server after edits.
- */
-const PLAYERS_CSV_FILE = 'cricket-players-my-tournament-2026-03-23.csv';
-
-/** Used only if the CSV file is missing or cannot be parsed. */
+/** Used only for the optional "quick list" player-entry mode (plain names, no CSV). */
 const sampleNamesFallback = [
-  'Samrat', 'Deepak Thakker', 'Amit Naik', 'Nilkanth Wagh', 'Sachin Pandya', 'Pinkesh Pandya', 'Vaidyanath', 'Shailendra Rajeshirke', 'Chetan', 'Harish Pandey', 'Atharva', 'Swapnil Mandivalli', 'Shanyu', 'Ajit Mahadik', 'Vishal B', 'Vishal Patil', 'Atul Vaikul', 'Kiran Chavan', 'Swapnil Deshmukh', 'Shuban', 'OM', 'Suresh (Baba)', 'Pravin (Baba ka Bhakt)', 'Ashish Mishra', 'Milind Muthe', 'Prakash Patil', 'Deepak Khaiwan', 'Tanmay', 'Ajay More', 'Vivek Thakare', 'Mithun Shetty', 'Sunil Waghralkar', 'Mihir Doshi', 'Dinesh Kadam', 'Pradeep Chalke', 'Hemant Narkar', 'Manoj Dabholkar', 'Jayesh Kshirsagarh', 'Shreyas Shinde', 'Ketan Patil', 'Shrikant Salunkhe', 'Anup Magare', 'Paras Kurmi', 'Dinesh Gholap', 'Swapnil Choche', 'Swapnil Gharat', 'Aniket', 'Aditya', 'Swapnil Bondre', 'Ronnel Quadras', 'Aadit B', 'Onkar Dhavale', 'Abhay Patil', 'Parth Patil', 'Navin Bijur',
+  'Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5', 'Player 6',
 ];
 
 module.exports = {
@@ -43,9 +40,8 @@ module.exports = {
   DEFAULT_PURSE,
   ROLE_PURSE_CUT,
   defaultConfig,
-  teamNames,
+  suggestedTeamNames,
   roles,
   tiers,
-  PLAYERS_CSV_FILE,
   sampleNamesFallback,
 };
